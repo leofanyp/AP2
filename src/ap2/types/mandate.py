@@ -14,15 +14,12 @@
 
 """Contains the definitions of the Agent Payments Protocol mandates."""
 
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Optional
 
-from ap2.types.payment_request import PaymentItem
-from ap2.types.payment_request import PaymentRequest
-from ap2.types.payment_request import PaymentResponse
-from pydantic import BaseModel
-from pydantic import Field
+from ap2.types.payment_request import (PaymentItem, PaymentRequest,
+                                       PaymentResponse)
+from pydantic import BaseModel, Field
 
 CART_MANDATE_DATA_KEY = "ap2.mandates.CartMandate"
 INTENT_MANDATE_DATA_KEY = "ap2.mandates.IntentMandate"
@@ -102,6 +99,8 @@ class CartContents(BaseModel):
       ..., description="When this cart expires, in ISO 8601 format."
   )
   merchant_name: str = Field(..., description="The name of the merchant.")
+  # JPMC: maybe merge with merchant_name to form a "merchant" object.
+  merchant_id: str = Field(..., description="The ID of the merchant.")
 
 
 class CartMandate(BaseModel):
@@ -191,7 +190,7 @@ class PaymentMandate(BaseModel):
             "aud": ...
             "nonce": ...
             "sd_hash": hash of the issuer-signed jwt
-            "transaction_data": an array containing the secure hashes of 
+            "transaction_data": an array containing the secure hashes of
               CartMandate and PaymentMandateContents.
 
           """

@@ -22,7 +22,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src","src/checkout_protos"]
 
 [tool.uv.sources]
 ap2 = { workspace = true }

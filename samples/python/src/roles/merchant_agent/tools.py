@@ -21,27 +21,21 @@ shopping and purchasing process.
 import base64
 import json
 import logging
-
-from pydantic import ValidationError
 from typing import Any
 
 from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import DataPart
-from a2a.types import Part
-from a2a.types import Task
-from a2a.types import TextPart
-
-from . import storage
+from a2a.types import DataPart, Part, Task, TextPart
 from ap2.types.contact_picker import ContactAddress
-from ap2.types.mandate import CART_MANDATE_DATA_KEY
-from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY
-from ap2.types.mandate import PaymentMandate
-from ap2.types.payment_request import PaymentCurrencyAmount
-from ap2.types.payment_request import PaymentItem
+from ap2.types.mandate import (CART_MANDATE_DATA_KEY, PAYMENT_MANDATE_DATA_KEY,
+                               PaymentMandate)
+from ap2.types.payment_request import PaymentCurrencyAmount, PaymentItem
 from common import message_utils
 from common.a2a_extension_utils import EXTENSION_URI
 from common.a2a_message_builder import A2aMessageBuilder
 from common.payment_remote_a2a_client import PaymentRemoteA2aClient
+from pydantic import ValidationError
+
+from . import checkout_tools, storage
 
 # A map of payment method types to their corresponding processor agent URLs.
 # This is the set of linked Merchant Payment Processor Agents this Merchant
@@ -92,6 +86,10 @@ async def update_cart(
     )
     return
 
+  # JPMC: call checkout server to set up the intent.
+  merchant_id, jwt = checkout_tools.setup_intent(cart_mandate)
+  cart_mandate.merchant_id = merchant_id
+
   # Update the CartMandate with new shipping and tax cost.
   try:
     # Add the shipping address to the CartMandate:
@@ -126,6 +124,9 @@ async def update_cart(
     # A base64url-encoded JSON Web Token (JWT) that digitally signs the cart
     # contents by the merchant's private key.
     cart_mandate.merchant_authorization = _FAKE_JWT
+
+    # JPMC: set the checkout jwt
+    cart_mandate.merchant_authorization = jwt
 
     await updater.add_artifact([
         Part(
@@ -180,6 +181,16 @@ async def initiate_payment(
         updater, f"No payment processor found for method: {payment_method_type}"
     )
     return
+
+  # JPMC: call checkout server to set up the intent.
+  cart_id = message_utils.find_data_part("cart_id", data_parts)
+  cart_mandate = storage.get_cart_mandate(cart_id)
+  merchant_id = cart_mandate.merchant_id
+  jwt = cart_mandate.merchant_authorization
+  checkout_tools.init_pay(merchant_id, jwt)
+  payment_mandate.payment_mandate_contents.merchant_agent = merchant_id
+  payment_mandate.payment_mandate_contents.payment_response.details.set("merchant_id", merchant_id)
+  payment_mandate.payment_mandate_contents.payment_response.details.set("checkout_jwt", jwt)
 
   payment_processor_agent = PaymentRemoteA2aClient(
       name="payment_processor_agent",
