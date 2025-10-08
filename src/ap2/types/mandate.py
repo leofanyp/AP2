@@ -14,12 +14,17 @@
 
 """Contains the definitions of the Agent Payments Protocol mandates."""
 
-from datetime import datetime, timezone
+
+from datetime import datetime
+from datetime import timezone
 from typing import Optional
 
-from ap2.types.payment_request import (PaymentItem, PaymentRequest,
-                                       PaymentResponse)
-from pydantic import BaseModel, Field
+from ap2.types.payment_request import PaymentItem
+from ap2.types.payment_request import PaymentRequest
+from ap2.types.payment_request import PaymentResponse
+from pydantic import BaseModel
+from pydantic import Field
+
 
 CART_MANDATE_DATA_KEY = "ap2.mandates.CartMandate"
 INTENT_MANDATE_DATA_KEY = "ap2.mandates.IntentMandate"

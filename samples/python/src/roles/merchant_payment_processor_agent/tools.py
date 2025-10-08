@@ -22,10 +22,17 @@ shopping and purchasing process.
 import logging
 from typing import Any
 
-from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import DataPart, Part, Task, TaskState, TextPart
-from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY, PaymentMandate
-from common import artifact_utils, message_utils
+from a2a.types import DataPart
+from a2a.types import Part
+from a2a.types import Task
+from a2a.types import TaskState
+from a2a.types import TextPart
+
+from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY
+from ap2.types.mandate import PaymentMandate
+from common import artifact_utils
+from common import message_utils
+
 from common.a2a_extension_utils import EXTENSION_URI
 from common.a2a_message_builder import A2aMessageBuilder
 from common.payment_remote_a2a_client import PaymentRemoteA2aClient

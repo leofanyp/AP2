@@ -21,21 +21,29 @@ shopping and purchasing process.
 import base64
 import json
 import logging
+
+from pydantic import ValidationError
 from typing import Any
 
 from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import DataPart, Part, Task, TextPart
+from a2a.types import DataPart
+from a2a.types import Part
+from a2a.types import Task
+from a2a.types import TextPart
+
+from . import storage
 from ap2.types.contact_picker import ContactAddress
-from ap2.types.mandate import (CART_MANDATE_DATA_KEY, PAYMENT_MANDATE_DATA_KEY,
-                               PaymentMandate)
-from ap2.types.payment_request import PaymentCurrencyAmount, PaymentItem
+from ap2.types.mandate import CART_MANDATE_DATA_KEY
+from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY
+from ap2.types.mandate import PaymentMandate
+from ap2.types.payment_request import PaymentCurrencyAmount
+from ap2.types.payment_request import PaymentItem
 from common import message_utils
 from common.a2a_extension_utils import EXTENSION_URI
 from common.a2a_message_builder import A2aMessageBuilder
 from common.payment_remote_a2a_client import PaymentRemoteA2aClient
-from pydantic import ValidationError
 
-from . import checkout_tools, storage
+from . import checkout_tools
 
 # A map of payment method types to their corresponding processor agent URLs.
 # This is the set of linked Merchant Payment Processor Agents this Merchant
