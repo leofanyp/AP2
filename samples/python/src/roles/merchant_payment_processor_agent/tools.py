@@ -39,6 +39,8 @@ from common.payment_remote_a2a_client import PaymentRemoteA2aClient
 
 from . import checkout_pay
 
+logging.basicConfig(level=logging.INFO)
+
 
 async def initiate_payment(
     data_parts: list[dict[str, Any]],

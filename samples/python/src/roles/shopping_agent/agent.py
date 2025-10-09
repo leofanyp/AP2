@@ -19,7 +19,7 @@ The shopping agent's role is to engage with a user to:
 2. Help complete the purchase of their chosen items.
 
 The Google ADK powers this shopping agent, chosen for its simplicity and
-efficiency in developing robust LLM agents. 
+efficiency in developing robust LLM agents.
 """
 
 from . import tools
@@ -30,9 +30,22 @@ from common.retrying_llm_agent import RetryingLlmAgent
 from common.system_utils import DEBUG_MODE_INSTRUCTIONS
 
 
+#from google.adk.models.lite_llm import LiteLlm
+
+#from .litellm_wrap import my_custom_llm
+
+# # 4. Create an ADK Agent that uses the custom LiteLLM provider
+# # The model name should follow the format "provider/model_name"
+# my_agent = Agent(
+#     name="my_custom_agent",
+#     model=LiteLlm(model="my-custom-google/anything"), # 'anything' is a placeholder
+#     instructions="You are a helpful assistant.",
+# )
+
 root_agent = RetryingLlmAgent(
     max_retries=5,
     model="gemini-2.5-flash",
+    #model=LiteLlm(model="my-custom-google/anything"), # 'anything' is a placeholder
     name="root_agent",
     instruction="""
           You are a shopping agent responsible for helping users find and

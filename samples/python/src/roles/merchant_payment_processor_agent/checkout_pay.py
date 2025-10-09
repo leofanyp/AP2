@@ -12,6 +12,8 @@ from roles.merchant_agent import checkout_tools
 
 #from your_generated_protos import YourRequestMessage, YourResponseMessage
 
+logging.basicConfig(level=logging.INFO)
+
 
 # Assuming you have a gRPC-Web proxy at this URL
 PROXY_URL = "http://localhost:8080/your.service.Name/YourMethod"

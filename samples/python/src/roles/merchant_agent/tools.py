@@ -44,6 +44,8 @@ from common.a2a_message_builder import A2aMessageBuilder
 from common.payment_remote_a2a_client import PaymentRemoteA2aClient
 
 from . import checkout_tools
+logging.basicConfig(level=logging.INFO)
+
 
 # A map of payment method types to their corresponding processor agent URLs.
 # This is the set of linked Merchant Payment Processor Agents this Merchant

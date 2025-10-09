@@ -26,6 +26,9 @@ import json
 import uuid
 
 
+logging.basicConfig(level=logging.INFO)
+
+
 def generate_order_number():
   """Generates a base64-encoded UUID string."""
   return uuid.uuid4().hex[0:16]
