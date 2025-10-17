@@ -8,11 +8,10 @@ logging.basicConfig(level=logging.INFO)
 def pay(merchant_id, cart_id):
     return checkout_tools.confirm_checkout(merchant_id, cart_id)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     import random
     import string
-
 
     def generate_random_digital_string(length):
         """
