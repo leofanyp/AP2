@@ -7,8 +7,7 @@ name = "ap2"
 version = "0.1"
 description = "Agent Payments Protocol"
 dependencies = [
-  "pydantic",
-  "litellm",
+  "pydantic"
 ]
 keywords = ["payments", "a2a", "ap2"]
 license = { text = "Apache-2.0" }

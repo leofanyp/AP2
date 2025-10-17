@@ -103,7 +103,7 @@ class CartContents(BaseModel):
   )
   merchant_name: str = Field(..., description="The name of the merchant.")
   # JPMC: maybe merge with merchant_name to form a "merchant" object.
-  merchant_id: str = Field(..., description="The ID of the merchant.")
+  merchant_id: Optional[str] = Field(None, description="The ID of the merchant.")
 
 
 class CartMandate(BaseModel):
@@ -193,7 +193,7 @@ class PaymentMandate(BaseModel):
             "aud": ...
             "nonce": ...
             "sd_hash": hash of the issuer-signed jwt
-            "transaction_data": an array containing the secure hashes of 
+            "transaction_data": an array containing the secure hashes of
               CartMandate and PaymentMandateContents.
 
           """

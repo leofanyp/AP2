@@ -22,6 +22,7 @@ shopping and purchasing process.
 import logging
 from typing import Any
 
+from a2a.server.tasks.task_updater import TaskUpdater
 from a2a.types import DataPart
 from a2a.types import Part
 from a2a.types import Task
@@ -29,7 +30,9 @@ from a2a.types import TaskState
 from a2a.types import TextPart
 
 from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY
+from ap2.types.mandate import CART_MANDATE_DATA_KEY
 from ap2.types.mandate import PaymentMandate
+from ap2.types.mandate import CartMandate
 from common import artifact_utils
 from common import message_utils
 
@@ -39,7 +42,7 @@ from common.payment_remote_a2a_client import PaymentRemoteA2aClient
 
 from . import checkout_pay
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 async def initiate_payment(
@@ -57,11 +60,19 @@ async def initiate_payment(
     await updater.failed(message=updater.new_agent_message(parts=error_message))
     return
 
+  logging.info("Checkout: getting cart mandate...")
+  cart_mandate = message_utils.parse_canonical_object(
+      CART_MANDATE_DATA_KEY, data_parts, CartMandate
+  )
+  logging.info("Checkout: got cart mandate %s", cart_mandate)
+
+
   challenge_response = (
       message_utils.find_data_part("challenge_response", data_parts) or ""
   )
   await _handle_payment_mandate(
       PaymentMandate.model_validate(payment_mandate),
+      cart_mandate,
       challenge_response,
       updater,
       current_task,
@@ -71,6 +82,7 @@ async def initiate_payment(
 
 async def _handle_payment_mandate(
     payment_mandate: PaymentMandate,
+    cart_mandate,
     challenge_response: str,
     updater: TaskUpdater,
     current_task: Task | None,
@@ -95,6 +107,7 @@ async def _handle_payment_mandate(
   if current_task.status.state == TaskState.input_required:
     await _check_challenge_response_and_complete_payment(
         payment_mandate,
+        cart_mandate,
         challenge_response,
         updater,
         debug_mode,
@@ -135,6 +148,7 @@ async def _raise_challenge(
 
 async def _check_challenge_response_and_complete_payment(
     payment_mandate: PaymentMandate,
+    cart_mandate,
     challenge_response: str,
     updater: TaskUpdater,
     debug_mode: bool = False,
@@ -151,7 +165,7 @@ async def _check_challenge_response_and_complete_payment(
     debug_mode: Whether the agent is in debug mode.
   """
   if _challenge_response_is_valid(challenge_response=challenge_response):
-    await _complete_payment(payment_mandate, updater, debug_mode)
+    await _complete_payment(payment_mandate, cart_mandate, updater, debug_mode)
     return
 
   message = updater.new_agent_message(
@@ -162,6 +176,7 @@ async def _check_challenge_response_and_complete_payment(
 
 async def _complete_payment(
     payment_mandate: PaymentMandate,
+    cart_mandate,
     updater: TaskUpdater,
     debug_mode: bool = False,
 ) -> None:
@@ -184,18 +199,33 @@ async def _complete_payment(
       payment_mandate_id,
       payment_credential,
   )
+
+  # JPMC: here we shall call Checkout.pay().
+  logging.info(
+      "Checkout: calling JPMC Checkout server to complete payment for %s with payment credential %s...",
+      payment_mandate_id,
+      payment_credential,
+  )
+  #merchant_id = payment_mandate.payment_mandate_contents.merchant_agent
+  #merchant_id = payment_mandate.payment_mandate_contents.payment_response.details.get("merchant_id")
+  #jwt = payment_mandate.payment_mandate_contents.payment_response.details.get("checkout_jwt")
+  merchant_id = cart_mandate.contents.merchant_id
+  #jwt = cart_mandate.merchant_authorization
+  #pay_resp = checkout_pay.pay(merchant_id, jwt)
+  cart_id = cart_mandate.contents.id
+  logging.info(
+      "Checkout: calling JPMC Checkout server to complete payment: merchant=%s, cart=%s",
+      merchant_id, cart_id)
+  pay_resp = checkout_pay.pay(merchant_id, cart_id)
+  #success_message.checkout_pay_response = pay_resp
+  logging.info(
+      "Checkout: calling JPMC Checkout server to complete payment returned: %s",
+      pay_resp)
+
   # Call issuer to complete the payment
   success_message = updater.new_agent_message(
       parts=_create_text_parts("{'status': 'success'}")
   )
-
-  # JPMC: here we shall call Checkout.pay().
-  merchant_id = payment_mandate.payment_mandate_contents.merchant_agent
-  merchant_id = payment_mandate.payment_mandate_contents.payment_response.details.get("merchant_id")
-  jwt = payment_mandate.payment_mandate_contents.payment_response.details.get("checkout_jwt")
-  pay_resp = checkout_pay.pay(merchant_id, jwt)
-  success_message.checkout_pay_response = pay_resp
-
   await updater.complete(message=success_message)
 
 

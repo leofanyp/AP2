@@ -95,12 +95,16 @@ async def initiate_payment(tool_context: ToolContext, debug_mode: bool = False):
   risk_data = tool_context.state["risk_data"]
   if not risk_data:
     raise RuntimeError("No risk data found in tool context state.")
+  cart_mandate = tool_context.state["cart_mandate"]
+  if not cart_mandate:
+    raise RuntimeError("No cart mandate found in tool context state.")
 
   outgoing_message_builder = (
       A2aMessageBuilder()
       .set_context_id(tool_context.state["shopping_context_id"])
       .add_text("Initiate a payment")
       .add_data(PAYMENT_MANDATE_DATA_KEY, payment_mandate)
+      .add_data(CART_MANDATE_DATA_KEY, cart_mandate)
       .add_data("risk_data", risk_data)
       .add_data("shopping_agent_id", "trusted_shopping_agent")
       .add_data("debug_mode", debug_mode)
@@ -134,12 +138,18 @@ async def initiate_payment_with_otp(
   if not risk_data:
     raise RuntimeError("No risk data found in tool context state.")
 
+  cart_mandate = tool_context.state["cart_mandate"]
+  if not cart_mandate:
+    raise RuntimeError("No cart mandate found in tool context state.")
+
+
   outgoing_message_builder = (
       A2aMessageBuilder()
       .set_context_id(tool_context.state["shopping_context_id"])
       .set_task_id(tool_context.state["initiate_payment_task_id"])
       .add_text("Initiate a payment. Include the challenge response.")
       .add_data(PAYMENT_MANDATE_DATA_KEY, payment_mandate)
+      .add_data(CART_MANDATE_DATA_KEY, cart_mandate)
       .add_data("shopping_agent_id", "trusted_shopping_agent")
       .add_data("challenge_response", challenge_response)
       .add_data("risk_data", risk_data)

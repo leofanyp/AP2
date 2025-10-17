@@ -16,9 +16,9 @@ dependencies = [
     "httpx",
     "requests",
     "ap2",
-    "litellm",
-    "azure-core==1.34.0",
-    "azure-identity==1.12.0",
+    #"litellm",
+    #"azure-core==1.34.0",
+    #"azure-identity==1.12.0",
     #"certifi==2025.4.26",
     #"pip-system-certs",
 ]

@@ -35,16 +35,20 @@ from . import storage
 from ap2.types.contact_picker import ContactAddress
 from ap2.types.mandate import CART_MANDATE_DATA_KEY
 from ap2.types.mandate import PAYMENT_MANDATE_DATA_KEY
+from ap2.types.mandate import CartMandate
 from ap2.types.mandate import PaymentMandate
 from ap2.types.payment_request import PaymentCurrencyAmount
 from ap2.types.payment_request import PaymentItem
+from ap2.types.payment_request import PaymentDetailsModifier
 from common import message_utils
 from common.a2a_extension_utils import EXTENSION_URI
 from common.a2a_message_builder import A2aMessageBuilder
 from common.payment_remote_a2a_client import PaymentRemoteA2aClient
 
 from . import checkout_tools
-logging.basicConfig(level=logging.INFO)
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 # A map of payment method types to their corresponding processor agent URLs.
@@ -67,7 +71,7 @@ async def update_cart(
   """Updates an existing cart after a shipping address is provided.
 
   Args:
-    data_parts: A list of data part contents from the request.
+    data_parts: A list of data part contents from the request
     updater: The TaskUpdater instance to add artifacts and complete the task.
     current_task: The current task -- not used in this function.
     debug_mode: Whether the agent is in debug mode.
@@ -98,7 +102,7 @@ async def update_cart(
 
   # JPMC: call checkout server to set up the intent.
   merchant_id, jwt = checkout_tools.setup_intent(cart_mandate)
-  cart_mandate.merchant_id = merchant_id
+  cart_mandate.contents.merchant_id = merchant_id
 
   # Update the CartMandate with new shipping and tax cost.
   try:
@@ -137,6 +141,15 @@ async def update_cart(
 
     # JPMC: set the checkout jwt
     cart_mandate.merchant_authorization = jwt
+
+    # details_modifier = PaymentDetailsModifier(data={"merchant_id": merchant_id, "jwt": jwt})
+    # if payment_request.details.modifiers is None:
+    #   payment_request.details.modifiers = [details_modifier]
+    # else:
+    #   payment_request.details.modifiers.append(details_modifier)
+
+    # logging.info("Checkout: payment_request.details: %s", payment_request.details)
+
 
     await updater.add_artifact([
         Part(
@@ -179,6 +192,12 @@ async def initiate_payment(
     await _fail_task(updater, "Missing risk_data.")
     return
 
+  logging.info("Checkout: getting cart mandate...")
+  cart_mandate = message_utils.parse_canonical_object(
+      CART_MANDATE_DATA_KEY, data_parts, CartMandate
+  )
+  logging.info("Checkout: got cart mandate %s", cart_mandate)
+
   payment_method_type = (
       payment_mandate.payment_mandate_contents.payment_response.method_name
   )
@@ -193,14 +212,16 @@ async def initiate_payment(
     return
 
   # JPMC: call checkout server to set up the intent.
-  cart_id = message_utils.find_data_part("cart_id", data_parts)
-  cart_mandate = storage.get_cart_mandate(cart_id)
-  merchant_id = cart_mandate.merchant_id
+  #cart_id = message_utils.find_data_part("cart_id", data_parts)
+  #cart_mandate = storage.get_cart_mandate(cart_id)
+  merchant_id = cart_mandate.contents.merchant_id
+  #payment_request.details.modifiers[0]
   jwt = cart_mandate.merchant_authorization
   checkout_tools.init_pay(merchant_id, jwt)
-  payment_mandate.payment_mandate_contents.merchant_agent = merchant_id
-  payment_mandate.payment_mandate_contents.payment_response.details.set("merchant_id", merchant_id)
-  payment_mandate.payment_mandate_contents.payment_response.details.set("checkout_jwt", jwt)
+
+  #payment_mandate.payment_mandate_contents.merchant_agent = merchant_id
+  #payment_mandate.payment_mandate_contents.payment_response.details.set("merchant_id", merchant_id)
+  #payment_mandate.payment_mandate_contents.payment_response.details.set("checkout_jwt", jwt)
 
   payment_processor_agent = PaymentRemoteA2aClient(
       name="payment_processor_agent",
@@ -215,6 +236,7 @@ async def initiate_payment(
       .set_context_id(updater.context_id)
       .add_text("initiate_payment")
       .add_data(PAYMENT_MANDATE_DATA_KEY, payment_mandate.model_dump())
+      .add_data(CART_MANDATE_DATA_KEY, cart_mandate)
       .add_data("risk_data", risk_data)
       .add_data("debug_mode", debug_mode)
   )

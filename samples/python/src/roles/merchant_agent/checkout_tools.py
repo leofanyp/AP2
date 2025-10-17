@@ -3,7 +3,6 @@ import logging
 import requests
 from ap2.types.mandate import CartMandate
 
-from . import checkout_grpc_web
 
 http_proxy = "http://proxy.jpmchase.net:8443"
 proxies = {
@@ -61,15 +60,6 @@ def create_payment_link(merchant_id, product_name : str,  unit_price: int, quant
     return resp
 
 
-def setup_intent(cart_mandate : CartMandate):
-    logging.info("Setup checkout intent ...")
-    cart_id = cart_mandate.cart_id
-    payment_request = cart_mandate.contents.payment_request
-    currency = payment_request.details.total.amount.currency
-    value = int(payment_request.details.total.amount.value * 100)
-    merchant_id = _lookup_merchant(cart_mandate.merchnat_name)
-    return _setup_intent(merchant_id, cart_id, currency, value)
-
 
 def _lookup_merchant(merchant_name : str):
     # TODO: to implement a function to return the actual merchant id by name.
@@ -79,7 +69,7 @@ import json
 
 
 def _setup_intent(merchant_id, cart_id : str, currency : str, value : int):
-    logging.info("Setup checkout intent ...")
+    logging.info("==== Checkout: Setup checkout intent ...")
     api_url = "https://merchant-api.checkout-dev.jpmchase.com/v1/checkout/intent"
     body = {
             "merchantOrderNumber": f"{cart_id}" ,
@@ -119,20 +109,78 @@ def _setup_intent(merchant_id, cart_id : str, currency : str, value : int):
                "requestId": "321",
                "content-type": "application/json" }
 
-    logging.info("request to checkout: header=%s, proxies=%s", headers, proxies)
-    logging.info("request to checkout: body=%s", json.dumps(body))
+    logging.info("Checkout: request to checkout: header=%s, proxies=%s", headers, proxies)
+    logging.info("Checkout: request to checkout: body=%s", json.dumps(body))
 
     #resp = requests.post(api_url, headers=headers, json=body, proxies=proxies)
     resp = requests.post(api_url, headers=headers, json=body)
-    logging.info("response from checkout intent: %s, text=%s, json=%s", resp, resp.text, resp.json())
+    logging.info("Checkout: response from checkout intent: %s, text=%s, json=%s", resp, resp.text, resp.json())
     jwt = resp.json()["checkoutSessionToken"]
     return merchant_id, jwt
 
 
+from datetime import datetime
+
+
+def setup_intent(cart_mandate : CartMandate):
+    logging.info("========================================")
+    logging.info("Checkout: Setup checkout intent ...")
+    logging.info("========================================")
+    cart_id = cart_mandate.contents.id
+    payment_request = cart_mandate.contents.payment_request
+    currency = payment_request.details.total.amount.currency
+    value = int(payment_request.details.total.amount.value * 100)
+    merchant_id = _lookup_merchant(cart_mandate.contents.merchant_name)
+    # Get the current datetime object
+    current_datetime = datetime.now()
+    timestamp_string = current_datetime.strftime("%Y%m%d%H%M%S")
+    order_ref = "ref" + timestamp_string
+    return _setup_intent(merchant_id, order_ref, currency, value)
+
+
+def confirm_checkout(merchant_id, cart_id : str):
+    logging.info("========================================")
+    logging.info("Checkout: Confirming checkout intent ...")
+    logging.info("========================================")
+
+    api_url = "https://merchant-api.checkout-dev.jpmchase.com/v1/checkout/intent/confirm"
+    body = {
+        "merchantOrderNumber": cart_id,
+        "paymentMethodType": {
+            "card": {
+                "accountNumberType": "PAN",
+                "accountNumber": "4444444444444455",
+                "expiry": {
+                    "month": 12,
+                    "year": 2026
+                },
+                "cvv": "123"
+            }
+        }
+    }
+    token = get_token(merchant_id)
+    headers = {"authorization": "Bearer " +  token.decode('utf-8'),
+               "x-checkout-version": "developer",
+               "merchantId": merchant_id,
+               "requestId": "321",
+               "content-type": "application/json" }
+
+    logging.info("Checkout: request to checkout: header=%s, proxies=%s", headers, proxies)
+    logging.info("Checkout: request to checkout: body=%s", json.dumps(body))
+
+    #resp = requests.post(api_url, headers=headers, json=body, proxies=proxies)
+    resp = requests.post(api_url, headers=headers, json=body)
+    logging.info("Checkout: response: %s, text=%s, json=%s", resp, resp.text, resp.json())
+    return resp.json()
+
+
 def init_pay(merchant_id, jwt):
-    checkout_grpc_web.pay(merchant_id, jwt)
+    #checkout_grpc_web.pay(merchant_id, jwt)
+    logging.info("Checkout: init payment... no op yet")
+
 
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
     _setup_intent("999959695028-smoke-tests-upg-diu", "123", "USD", "999")
+    confirm_checkout("999959695028-smoke-tests-upg-diu", "123")
