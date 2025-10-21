@@ -144,7 +144,7 @@ def _setup_intent(
         'authorization': 'Bearer ' + token.decode('utf-8'),
         'x-checkout-version': 'developer',
         'merchantId': merchant_id,
-        'requestId': '321',
+        'requestId': order_number,
         'content-type': 'application/json',
     }
 
@@ -163,8 +163,7 @@ def _setup_intent(
         resp.json(),
     )
     # jwt = resp.json()["checkoutSessionToken"]
-    c7_resp = C7Response(api='checkent/setup_intent', response=resp.json())
-    return c7_resp
+    return C7Response(api='checkent/setup_intent', response=resp.json())
 
 
 def deterministic_alphanumeric_hash(input_string, desired_length=None):
@@ -187,10 +186,9 @@ def deterministic_alphanumeric_hash(input_string, desired_length=None):
     # 3. Encode the hash bytes to a Base64 alphanumeric string
     alphanumeric_hash = base64.b64encode(hashed_bytes).decode('ascii')
 
-    # 4. Remove padding characters (if any) and potentially truncate to desired length
-    alphanumeric_hash = alphanumeric_hash.replace(
-        '=', ''
-    )  # Remove Base64 padding
+    # 4. Remove unwanted characters (if any) and potentially truncate to desired length
+    for u in ['=', '+', '/', '-', '_']:
+        alphanumeric_hash = alphanumeric_hash.replace(u, '')
 
     if desired_length is not None:
         return alphanumeric_hash[:desired_length]
@@ -264,7 +262,7 @@ def _confirm_checkout(merchant_id, order_number: str) -> C7Response:
         'authorization': 'Bearer ' + token.decode('utf-8'),
         'x-checkout-version': 'developer',
         'merchantId': merchant_id,
-        'requestId': '321',
+        'requestId': order_number,
         'content-type': 'application/json',
     }
 
@@ -279,20 +277,19 @@ def _confirm_checkout(merchant_id, order_number: str) -> C7Response:
     logging.info(
         'Checkout: response: %s, text=%s, json=%s', resp, resp.text, resp.json()
     )
-    c7_resp = C7Response(api='checkout/confirm_intent', response=resp.json())
-    return c7_resp
+    return C7Response(api='checkout/confirm_intent', response=resp.json())
 
 
 def _test_with_cart_id(cart_id: str = 'cart_1'):
     order_number = _lookup_order_number(cart_id, '2025-12-31T23:59:59Z')
     resp = _setup_intent(
-        '999959695028-smoke-tests-upg-diu',
+        default_mid,
         order_number,
         'USD',
         '999',
     )
     logging.info('Setup intent response: %s', resp)
-    resp = _confirm_checkout('999959695028-smoke-tests-upg-diu', order_number)
+    resp = _confirm_checkout(default_mid, order_number)
     logging.info('Confirm intent response: %s', resp)
 
 
@@ -300,7 +297,7 @@ def _test_with_cart_mandate(cart_id):
     cart_mandate = CartMandate(
         contents=CartContents(
             id=cart_id,
-            merchant_name='Awesome merchant',  # 999959695028-smoke-tests-upg-diu",
+            merchant_name='Awesome merchant',
             user_cart_confirmation_required=True,
             cart_expiry='2025-12-31T23:59:59Z',
             payment_request=PaymentRequest(
