@@ -36,7 +36,7 @@ from ap2.types.mandate import PaymentMandateContents
 from ap2.types.payment_request import PaymentResponse
 from common import artifact_utils
 from common.a2a_message_builder import A2aMessageBuilder
-
+from common.c7_models import C7Response
 
 async def update_cart(
     shipping_address: ContactAddress,
@@ -75,6 +75,12 @@ async def update_cart(
 
   tool_context.state["cart_mandate"] = updated_cart_mandate
   tool_context.state["shipping_address"] = shipping_address
+
+  c7_resp_lists = artifact_utils.find_canonical_objects(
+      task.artifacts, "checkout.response", C7Response
+  )
+  c7_resp = artifact_utils.only(c7_resp_lists)
+  tool_context.state["checkout_response"] = c7_resp
 
   return updated_cart_mandate
 

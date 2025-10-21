@@ -209,22 +209,22 @@ async def _complete_payment(
   #merchant_id = payment_mandate.payment_mandate_contents.merchant_agent
   #merchant_id = payment_mandate.payment_mandate_contents.payment_response.details.get("merchant_id")
   #jwt = payment_mandate.payment_mandate_contents.payment_response.details.get("checkout_jwt")
-  merchant_id = cart_mandate.contents.merchant_id
+  merchant_name = cart_mandate.contents.merchant_name
   #jwt = cart_mandate.merchant_authorization
   #pay_resp = checkout_pay.pay(merchant_id, jwt)
   cart_id = cart_mandate.contents.id
   logging.info(
       "Checkout: calling JPMC Checkout server to complete payment: merchant=%s, cart=%s",
-      merchant_id, cart_id)
-  pay_resp = checkout_pay.pay(merchant_id, cart_id)
+      merchant_name, cart_id)
+  #pay_resp = checkout_pay.pay(merchant_id, cart_id)
+  pay_resp = checkout_pay.pay(cart_mandate)
+
   #success_message.checkout_pay_response = pay_resp
-  logging.info(
-      "Checkout: calling JPMC Checkout server to complete payment returned: %s",
-      pay_resp)
+  logging.info("Checkout: JPMC Checkout returned payment response: %s", pay_resp.model_dump_json(indent=2))
 
   # Call issuer to complete the payment
   success_message = updater.new_agent_message(
-      parts=_create_text_parts("{'status': 'success'}")
+      parts=_create_text_parts("{'status': 'success'}", pay_resp.model_dump_json(indent=2))
   )
   await updater.complete(message=success_message)
 

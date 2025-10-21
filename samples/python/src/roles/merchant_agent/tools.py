@@ -101,8 +101,8 @@ async def update_cart(
     return
 
   # JPMC: call checkout server to set up the intent.
-  merchant_id, jwt = checkout_tools.setup_intent(cart_mandate)
-  cart_mandate.contents.merchant_id = merchant_id
+  c7_intent_resp = checkout_tools.setup_intent(cart_mandate)
+  #cart_mandate.contents.merchant_id = merchant_id
 
   # Update the CartMandate with new shipping and tax cost.
   try:
@@ -140,7 +140,7 @@ async def update_cart(
     cart_mandate.merchant_authorization = _FAKE_JWT
 
     # JPMC: set the checkout jwt
-    cart_mandate.merchant_authorization = jwt
+    #cart_mandate.merchant_authorization = jwt
 
     # details_modifier = PaymentDetailsModifier(data={"merchant_id": merchant_id, "jwt": jwt})
     # if payment_request.details.modifiers is None:
@@ -150,13 +150,13 @@ async def update_cart(
 
     # logging.info("Checkout: payment_request.details: %s", payment_request.details)
 
-
     await updater.add_artifact([
         Part(
             root=DataPart(
                 data={CART_MANDATE_DATA_KEY: cart_mandate.model_dump()}
             )
         ),
+        Part(root=DataPart(data={"checkout.response": c7_intent_resp})),
         Part(root=DataPart(data={"risk_data": risk_data})),
     ])
     await updater.complete()
@@ -196,7 +196,7 @@ async def initiate_payment(
   cart_mandate = message_utils.parse_canonical_object(
       CART_MANDATE_DATA_KEY, data_parts, CartMandate
   )
-  logging.info("Checkout: got cart mandate %s", cart_mandate)
+  logging.info("Checkout: got cart mandate %s, and forward it to payment-processor-agent", cart_mandate)
 
   payment_method_type = (
       payment_mandate.payment_mandate_contents.payment_response.method_name
@@ -214,14 +214,16 @@ async def initiate_payment(
   # JPMC: call checkout server to set up the intent.
   #cart_id = message_utils.find_data_part("cart_id", data_parts)
   #cart_mandate = storage.get_cart_mandate(cart_id)
-  merchant_id = cart_mandate.contents.merchant_id
+  #merchant_id = cart_mandate.contents.merchant_id
   #payment_request.details.modifiers[0]
-  jwt = cart_mandate.merchant_authorization
-  checkout_tools.init_pay(merchant_id, jwt)
+  #jwt = cart_mandate.merchant_authorization
+  #checkout_tools.init_pay(merchant_id, jwt)
 
   #payment_mandate.payment_mandate_contents.merchant_agent = merchant_id
   #payment_mandate.payment_mandate_contents.payment_response.details.set("merchant_id", merchant_id)
   #payment_mandate.payment_mandate_contents.payment_response.details.set("checkout_jwt", jwt)
+
+  #logging.info("Checkout: calling payment-processor-agent to init payment")
 
   payment_processor_agent = PaymentRemoteA2aClient(
       name="payment_processor_agent",

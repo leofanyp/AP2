@@ -102,8 +102,6 @@ class CartContents(BaseModel):
       ..., description="When this cart expires, in ISO 8601 format."
   )
   merchant_name: str = Field(..., description="The name of the merchant.")
-  # JPMC: maybe merge with merchant_name to form a "merchant" object.
-  merchant_id: Optional[str] = Field(None, description="The ID of the merchant.")
 
 
 class CartMandate(BaseModel):
